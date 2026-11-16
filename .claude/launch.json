@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "cargo",
+      "runtimeArgs": ["run", "--", "--no-elevate", "--background", "--dev-server", "127.0.0.1:7901", "--instance-port", "47699", "--data-dir", "target/dev-data"],
+      "port": 7901
+    }
+  ]
+}

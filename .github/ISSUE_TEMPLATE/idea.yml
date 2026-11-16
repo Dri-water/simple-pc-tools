@@ -1,0 +1,22 @@
+name: Idea or annoyance
+description: Something a simple tool could fix, or a way to make one better
+labels: [idea]
+body:
+  - type: textarea
+    id: annoyance
+    attributes:
+      label: What bugs you?
+      description: Describe what happens today and why it's annoying. Plain words are perfect.
+    validations:
+      required: true
+  - type: textarea
+    id: wish
+    attributes:
+      label: What would you like instead?
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who is it for?
+      options:
+        - Everyone (should just work)
+        - Power users (fine under Advanced)
