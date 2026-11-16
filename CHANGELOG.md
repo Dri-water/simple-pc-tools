@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 (2026-11-16)
+
+- Installer: the full standard wizard (Welcome, Licence, Install location, Select components, Additional tasks, Ready, Finish), with every tool and "Start when I sign in" ticked by default. Uninstalling asks whether to keep your settings.
+- Tools are registered in one list (`src/tools/mod.rs`), and the UI is split into one script per page, so adding a tool is a short, test-checked recipe (CONTRIBUTING.md).
+- README screenshots and an installer walkthrough.
+- CI builds the installer and tests a real install and uninstall on every push.
+
 ## 0.1.0 (2026-11-16)
 
 First release.

@@ -10,12 +10,16 @@ WebView2 window. Read CONTRIBUTING.md for the layout.
 - **Simple first.** Defaults must work for non-technical users. Power-user
   options go under an "Advanced" disclosure. Plain words in the UI, never
   internal field names.
+- **New tools** follow CONTRIBUTING.md "Adding a tool": register in
+  `src/tools/mod.rs` `ALL`, one page script `ui/js/<id>.js`; the tests name
+  anything missed.
 - **UI changes follow DESIGN.md.** Colours only as tokens in the
-  `TOKENS:BEGIN`…`TOKENS:END` block, with the light value and both dark
+  `TOKENS:BEGIN`…`TOKENS:END` block of `ui/style.css`, with the light value and both dark
   blocks. Font sizes and families only via `--step-*` / `--font-*`. Reuse the
   listed components, and document new ones. No external resources, no
   frameworks or build step, no `alert`/`confirm`/`prompt`. A new server field
-  shown in the UI also gets demo data in `demoApi`.
+  shown in the UI also gets demo data in `ui/js/demo.js`. After a visible
+  change, run `scripts\screenshots.ps1` and commit the new README pictures.
 - **Security.** The app is elevated. Its API is served only to its own window
   over the `spt://` custom protocol. Don't add network listeners. Apps the user
   adds start with their normal rights unless they choose "Run as

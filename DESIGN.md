@@ -1,7 +1,8 @@
 # Simple PC Tools design system
 
-The whole UI is one page, `ui/index.html`, shown in the app's own window
-(WebView2). It should feel like a calm, native Windows 11 settings page: open
+The UI is one page shown in the app's own window (WebView2): `ui/index.html`
+(the shell and icons), `ui/style.css` (all styles), and one script per page in
+`ui/js/`. It should feel like a calm, native Windows 11 settings page: open
 it, see at a glance whether anything needs you, change a switch, close it.
 
 `tests/ui_design.rs` enforces the mechanical rules below as part of `cargo test`.
@@ -41,7 +42,7 @@ The judgement rules are up to you, so read this before changing the UI.
 
 ## Tokens
 
-All tokens are at the top of the `<style>` block, between `TOKENS:BEGIN` and
+All tokens are at the top of `ui/style.css`, between `TOKENS:BEGIN` and
 `TOKENS:END`. That block is the only place a colour may be written.
 
 | Role | Tokens | Use |
@@ -74,7 +75,7 @@ colour token goes in all three places, and the tests check this.
 | `stopped`, `unknown` | Not running / Not checked yet | idle (grey) | steady |
 
 A new state in `src/tools/apps/supervisor.rs` (`Health`) needs a row here, an
-entry in `STATES` in the page script, a `.st-<state>` rule, and a demo app.
+entry in `STATES` in `ui/js/apps.js`, a `.st-<state>` rule, and a demo app.
 
 ## Components
 
@@ -110,7 +111,8 @@ Reuse these; don't invent look-alikes. A new component gets a line here.
 - **Empty state** `.card.empty`: an icon, a heading, one sentence, and the
   action to take.
 - **Toast** `toast(msg)`: confirms every action in one short sentence.
-- **Icons**: the inline SVG sprite at the top of `<body>`, with a 16 px
+- **Icons**: the inline SVG sprite in `ui/index.html`, `i-<name>`; a tool's nav
+  icon is `i-<tool id>`, with a 16 px
   viewBox, `stroke="currentColor"`, 1.6–2 px strokes and round caps. Add new
   ones there. No emoji, icon fonts or external images.
 
@@ -128,7 +130,8 @@ click turns the button into "Click again to …" for 4 seconds. Never use
   visible has changed, so focus, hover and open activity panels survive. The
   "next check" countdown ticks every second.
 - Respect `prefers-reduced-motion`, and keep the `:focus-visible` outlines.
-- A new server field shown in the UI also goes into the demo data (`demoApi`).
+- A new server field shown in the UI also goes into the demo data (`ui/js/demo.js`).
+- Run `scripts\screenshots.ps1` after a visible change, so the README pictures stay current.
 
 ## The icon
 

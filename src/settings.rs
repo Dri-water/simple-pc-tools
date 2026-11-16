@@ -1,6 +1,7 @@
 //! App-wide settings (`settings.json` in the data folder): which tools are
 //! on, theme, and update preferences. Each tool keeps its own file.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -11,17 +12,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Settings {
-    pub tools: Tools,
+    /// Tool id -> on/off. Tools not listed are on (see `tools::ALL`).
+    pub tools: BTreeMap<String, bool>,
     /// "system", "light" or "dark".
     pub theme: String,
     pub updates: Updates,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(default)]
-pub struct Tools {
-    pub apps: bool,
-    pub disk: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -38,18 +33,9 @@ pub struct Updates {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            tools: Tools::default(),
+            tools: BTreeMap::new(),
             theme: "system".into(),
             updates: Updates::default(),
-        }
-    }
-}
-
-impl Default for Tools {
-    fn default() -> Self {
-        Self {
-            apps: true,
-            disk: true,
         }
     }
 }
@@ -61,6 +47,12 @@ impl Default for Updates {
             skipped: None,
             snoozed_until: 0,
         }
+    }
+}
+
+impl Settings {
+    pub fn tool_on(&self, id: &str) -> bool {
+        self.tools.get(id).copied().unwrap_or(true)
     }
 }
 

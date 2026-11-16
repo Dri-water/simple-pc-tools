@@ -3,7 +3,7 @@ members = ["crates/disk-scan"]
 
 [package]
 name = "simple-pc-tools"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Small, no-frills tools for your Windows PC: keep apps running, see what fills your disk"
 license = "GPL-3.0-or-later"

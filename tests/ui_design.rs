@@ -1,28 +1,61 @@
-//! Design guardrails for ui/index.html. These keep the UI on its design system
-//! (DESIGN.md) as agents and people change it. If one fails, fix the UI to fit
-//! the system; change a rule here only together with DESIGN.md.
+//! Design and structure guardrails for the UI (ui/). They keep it on its design
+//! system (DESIGN.md) and keep every tool fully wired, as people and agents
+//! change it. If one fails, fix the UI to fit; change a rule here only together
+//! with DESIGN.md or CONTRIBUTING.md.
 
-const UI: &str = include_str!("../ui/index.html");
+use std::path::Path;
 
-fn style() -> &'static str {
-    let start = UI.find("<style>").expect("ui has a <style> block") + "<style>".len();
-    let end = UI.find("</style>").expect("ui closes its <style> block");
-    &UI[start..end]
+const HTML: &str = include_str!("../ui/index.html");
+const CSS: &str = include_str!("../ui/style.css");
+const CORE: &str = include_str!("../ui/js/core.js");
+const APPS: &str = include_str!("../ui/js/apps.js");
+const DISK: &str = include_str!("../ui/js/disk.js");
+const SETTINGS: &str = include_str!("../ui/js/settings.js");
+const DEMO: &str = include_str!("../ui/js/demo.js");
+const API: &str = include_str!("../src/api.rs");
+const TOOLS: &str = include_str!("../src/tools/mod.rs");
+const INSTALLER: &str = include_str!("../installer/simple-pc-tools.iss");
+
+fn scripts() -> [(&'static str, &'static str); 5] {
+    [
+        ("core.js", CORE),
+        ("apps.js", APPS),
+        ("disk.js", DISK),
+        ("settings.js", SETTINGS),
+        ("demo.js", DEMO),
+    ]
+}
+
+fn everything() -> String {
+    let mut all = format!("{HTML}\n{CSS}");
+    for (_, js) in scripts() {
+        all.push('\n');
+        all.push_str(js);
+    }
+    all
+}
+
+/// Tool ids registered in src/tools/mod.rs (`id: "..."` inside `ALL`).
+fn tool_ids() -> Vec<&'static str> {
+    let all = &TOOLS[TOOLS.find("pub const ALL").expect("tools::ALL")..];
+    let all = &all[..all.find("];").unwrap()];
+    all.split("id: \"")
+        .skip(1)
+        .map(|s| &s[..s.find('"').unwrap()])
+        .collect()
 }
 
 /// The token blocks open the stylesheet and end at the TOKENS:END marker.
 fn token_block() -> &'static str {
-    let s = style();
     assert!(
-        s.contains("TOKENS:BEGIN"),
+        CSS.contains("TOKENS:BEGIN"),
         "keep the TOKENS:BEGIN marker in :root"
     );
-    &s[..s.find("TOKENS:END").expect("TOKENS:END marker")]
+    &CSS[..CSS.find("TOKENS:END").expect("TOKENS:END marker")]
 }
 
 fn outside_tokens() -> &'static str {
-    let s = style();
-    &s[s.find("TOKENS:END").unwrap()..]
+    &CSS[CSS.find("TOKENS:END").unwrap()..]
 }
 
 /// `--name: value;` declarations inside one `{ ... }` block that starts at `selector`.
@@ -90,15 +123,23 @@ fn has_colour_literal(text: &str) -> Option<String> {
 #[test]
 fn colours_are_only_written_as_tokens() {
     if let Some(found) = has_colour_literal(&strip_comments(outside_tokens())) {
-        panic!(
-            "colour literal {found:?} outside the TOKENS block; add or reuse a token in DESIGN.md"
-        );
+        panic!("colour literal {found:?} in ui/style.css outside the TOKENS block; add or reuse a token in DESIGN.md");
     }
-    for attr in UI.split("style=\"").skip(1) {
-        let value = &attr[..attr.find('"').unwrap()];
-        if let Some(found) = has_colour_literal(value) {
-            panic!("colour literal {found:?} in a style attribute; use a class and a token");
+    for (name, text) in [("index.html", HTML)].into_iter().chain(scripts()) {
+        assert!(
+            !text.contains("<style"),
+            "{name} has a <style> block; styles go in ui/style.css"
+        );
+        for attr in text.split("style=\"").skip(1) {
+            let value = &attr[..attr.find('"').unwrap()];
+            if let Some(found) = has_colour_literal(value) {
+                panic!("colour literal {found:?} in a style attribute in {name}; use a class and a token");
+            }
         }
+        assert!(
+            !text.contains(".style.color") && !text.contains(".style.background"),
+            "{name} sets colours from script; toggle a class instead"
+        );
     }
 }
 
@@ -134,8 +175,7 @@ fn both_dark_blocks_redefine_the_same_tokens() {
 
 #[test]
 fn type_sizes_and_families_come_from_tokens() {
-    let css = outside_tokens();
-    for decl in css.split(';') {
+    for decl in outside_tokens().split(';') {
         let decl = decl.trim();
         for prop in ["font-size:", "font-family:", "font:"] {
             if let Some(rest) = decl.split_once(prop).map(|(_, v)| v) {
@@ -148,7 +188,8 @@ fn type_sizes_and_families_come_from_tokens() {
 
 #[test]
 fn ui_works_offline_and_inside_the_webview() {
-    // Links out (GitHub) are fine; anything the page *loads* must be inline.
+    let all = everything();
+    // Links out (GitHub) are fine; anything the page *loads* must be built in.
     for bad in [
         "src=\"http",
         "<link rel=\"stylesheet\" href=\"http",
@@ -157,11 +198,11 @@ fn ui_works_offline_and_inside_the_webview() {
         "url(http",
     ] {
         assert!(
-            !UI.contains(bad),
-            "ui loads {bad}...: the app must work offline, inline it"
+            !all.contains(bad),
+            "ui loads {bad}...: the app must work offline"
         );
     }
-    for link in UI.split("href=\"http").skip(1) {
+    for link in all.split("href=\"http").skip(1) {
         assert!(
             link.starts_with("s://github.com/"),
             "external link to {}: only GitHub links (opened in the browser) are expected",
@@ -170,18 +211,78 @@ fn ui_works_offline_and_inside_the_webview() {
     }
     for bad in ["alert(", "confirm(", "prompt("] {
         assert!(
-            !UI.contains(bad),
+            !all.contains(bad),
             "ui uses {bad}): build the confirmation into the page"
         );
     }
     assert!(
-        UI.contains("prefers-reduced-motion"),
+        CSS.contains("prefers-reduced-motion"),
         "keep the reduced-motion rule"
     );
     assert!(
-        UI.contains(":focus-visible"),
+        CSS.contains(":focus-visible"),
         "keep a visible keyboard focus style"
     );
+}
+
+#[test]
+fn every_ui_file_is_served_and_loaded() {
+    for (name, _) in scripts() {
+        let url = format!("/ui/js/{name}");
+        assert!(
+            API.contains(&format!("\"{url}\"")),
+            "{url} isn't served: add it to UI_FILES in src/api.rs"
+        );
+        assert!(
+            HTML.contains(&format!("src=\"{url}\"")),
+            "{url} isn't loaded by ui/index.html"
+        );
+    }
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui/js");
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let name = entry.unwrap().file_name().into_string().unwrap();
+        assert!(
+            scripts().iter().any(|(n, _)| *n == name),
+            "ui/js/{name} must be listed in tests/ui_design.rs scripts(), src/api.rs UI_FILES and ui/index.html"
+        );
+    }
+}
+
+#[test]
+fn every_tool_is_fully_wired() {
+    let ids = tool_ids();
+    assert!(!ids.is_empty(), "no tools found in src/tools/mod.rs");
+    for id in ids {
+        let file = format!("{id}.js");
+        let (_, page) = scripts()
+            .into_iter()
+            .find(|(n, _)| *n == file)
+            .unwrap_or_else(|| panic!("tool {id:?} has no ui/js/{file}"));
+        assert!(
+            page.contains(&format!("registerPage('{id}'")),
+            "ui/js/{file} must call registerPage('{id}', ...)"
+        );
+        assert!(
+            HTML.contains(&format!("id=\"i-{id}\"")),
+            "tool {id:?} needs a nav icon <symbol id=\"i-{id}\"> in ui/index.html"
+        );
+        assert!(
+            TOOLS.contains(&format!("\"/api/{id}\"")),
+            "tool {id:?}'s API isn't nested under /api/{id} in Tools::router"
+        );
+        assert!(
+            DEMO.contains(&format!("id: '{id}'")),
+            "demo.js info.tools lacks {id:?}"
+        );
+        assert!(
+            DEMO.contains(&format!("'/api/{id}")),
+            "demo.js has no demo answers for /api/{id}"
+        );
+        assert!(
+            INSTALLER.contains(&format!("Name: \"{id}\"")),
+            "installer has no component for {id:?}"
+        );
+    }
 }
 
 #[test]
@@ -191,7 +292,7 @@ fn demo_mode_covers_every_health_state_the_server_reports() {
         "healthy", "failing", "starting", "held", "gave_up", "stopped",
     ] {
         assert!(
-            UI.contains(&format!("health: '{state}'")),
+            DEMO.contains(&format!("health: '{state}'")),
             "demo data lacks a {state} app"
         );
     }
@@ -201,50 +302,29 @@ fn demo_mode_covers_every_health_state_the_server_reports() {
     ] {
         assert!(
             server.contains(variant),
-            "Health::{variant} renamed? update STATES in ui/index.html"
+            "Health::{variant} renamed? update STATES in ui/js/apps.js"
         );
     }
     for key in [
         "healthy", "starting", "acting", "failing", "gave_up", "held", "stopped", "unknown",
     ] {
         assert!(
-            UI.contains(&format!("{key}:")),
-            "STATES in ui/index.html lacks {key}"
+            APPS.contains(&format!("{key}:")),
+            "STATES in ui/js/apps.js lacks {key}"
         );
         assert!(
-            UI.contains(&format!(".st-{key}")),
-            "no .st-{key} colour class in ui/index.html"
+            CSS.contains(&format!(".st-{key}")),
+            "no .st-{key} colour class in ui/style.css"
         );
     }
-}
-
-#[test]
-fn every_page_and_tool_api_has_demo_data() {
-    // New server endpoints the page calls need a demo answer, so /?demo keeps working.
     for path in [
         "/api/info",
-        "/api/apps",
         "/api/disk/drives",
         "/api/disk/status",
         "/api/disk/list",
     ] {
         assert!(
-            UI.contains(&format!("'{path}'")),
-            "the page or demoApi doesn't know {path}"
-        );
-    }
-    let demo = &UI[UI
-        .find("async function demoApi")
-        .expect("demoApi in ui/index.html")..];
-    for path in [
-        "/api/info",
-        "/api/apps",
-        "/api/disk/drives",
-        "/api/disk/status",
-        "/api/disk/list",
-    ] {
-        assert!(
-            demo.contains(&format!("'{path}'")),
+            DEMO.contains(&format!("'{path}'")),
             "demoApi has no answer for {path}"
         );
     }

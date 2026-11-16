@@ -11,13 +11,11 @@ mod tools;
 mod update;
 
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 
 use crate::settings::SettingsFile;
-use crate::tools::apps::{store_path, supervisor::Manager, Store};
 
 const HELP: &str = "\
 simple-pc-tools [options]
@@ -28,7 +26,7 @@ simple-pc-tools [options]
   --instance-port N   local port that keeps one copy running (default 47615)
   --no-elevate        don't ask for administrator rights (development)
   --dev-server ADDR   also serve the UI over HTTP, e.g. 127.0.0.1:7901 (development)
-  --setup [--tools apps,disk] [--autostart on|off]
+  --setup [--tools apps,disk|none] [--autostart on|off]
                       installer step: save tool choices, set up Start with Windows
   --uninstall [--remove-data]
                       uninstaller step: quit, remove Start with Windows
@@ -181,20 +179,7 @@ fn main() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     let _guard = runtime.enter();
     let settings = Arc::new(SettingsFile::open(&data_dir));
-    let store_file = store_path(&data_dir);
-    let store = Store::load(&store_file).unwrap_or_else(|e| {
-        tracing::error!(
-            "{} unreadable ({e:#}); starting with no apps",
-            store_file.display()
-        );
-        // Keep the unreadable file for the user instead of overwriting it.
-        let _ = std::fs::copy(&store_file, store_file.with_extension("json.broken"));
-        Store::default()
-    });
-    let manager = Manager::new(store, store_file);
-    manager
-        .enabled
-        .store(settings.get().tools.apps, Ordering::Relaxed);
+    let tools = tools::Tools::start(&data_dir, &settings.get());
     let updater = update::Updater::new();
 
     let desktop = desktop::Desktop::new();
@@ -203,19 +188,18 @@ fn main() -> Result<()> {
     let app = api::App {
         settings: settings.clone(),
         updater: updater.clone(),
-        manager: manager.clone(),
+        tools,
         data_dir: data_dir.clone(),
         exe: std::env::current_exe()?,
         quit: Arc::new(move || quit_handle.quit()),
     };
-    let router = api::router(app, Arc::default());
+    let router = api::router(app);
 
     let commands = handle.clone();
     instance::serve(listener, move |c| match c {
         instance::Command::Show => commands.show(),
         instance::Command::Quit => commands.quit(),
     });
-    runtime.spawn(manager.run());
     runtime.spawn(updater.run(settings.clone()));
     if let Some(addr) = &args.dev_server {
         let listener = runtime
@@ -248,9 +232,16 @@ fn setup(args: &Args, data_dir: &std::path::Path) -> Result<()> {
     let settings = SettingsFile::open(data_dir);
     if let Some(list) = &args.tools {
         let chosen: Vec<&str> = list.split(',').map(str::trim).collect();
+        if let Some(bad) = chosen
+            .iter()
+            .find(|&&t| t != "none" && tools::find(t).is_none())
+        {
+            anyhow::bail!("unknown tool {bad:?}");
+        }
         settings.update(|s| {
-            s.tools.apps = chosen.contains(&"apps");
-            s.tools.disk = chosen.contains(&"disk");
+            for t in tools::ALL {
+                s.tools.insert(t.id.into(), chosen.contains(&t.id));
+            }
         })?;
     }
     match args.autostart {

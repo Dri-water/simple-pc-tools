@@ -259,6 +259,23 @@ pub fn store_path(data_dir: &Path) -> PathBuf {
     data_dir.join("apps.json")
 }
 
+/// Loads the saved apps and starts the check loop on the current runtime.
+pub fn start(data_dir: &Path) -> std::sync::Arc<supervisor::Manager> {
+    let file = store_path(data_dir);
+    let store = Store::load(&file).unwrap_or_else(|e| {
+        tracing::error!(
+            "{} unreadable ({e:#}); starting with no apps",
+            file.display()
+        );
+        // Keep the unreadable file for the user instead of overwriting it.
+        let _ = std::fs::copy(&file, file.with_extension("json.broken"));
+        Store::default()
+    });
+    let manager = supervisor::Manager::new(store, file);
+    tokio::spawn(manager.clone().run());
+    manager
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

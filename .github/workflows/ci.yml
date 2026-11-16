@@ -18,6 +18,9 @@ jobs:
         run: cargo fmt --all --check
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: UI scripts parse
+        shell: pwsh
+        run: Get-ChildItem ui\js\*.js | ForEach-Object { node --check $_.FullName; if ($LASTEXITCODE) { exit 1 } }
       - name: Test (includes the UI design rules in tests/ui_design.rs)
         run: cargo test --workspace
       - name: Fast scan of a real drive (GitHub's runners are administrators)
@@ -42,7 +45,8 @@ jobs:
         shell: pwsh
         run: |
           $setup = Get-Item target\installer\simple-pc-tools-setup-*.exe
-          Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/COMPONENTS="core,apps"','/TASKS="autostart"' -Wait
+          # Wait for the installer only (-Wait would also wait for the app it starts).
+          (Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/COMPONENTS="core,apps"','/TASKS="autostart"' -PassThru).WaitForExit()
           $exe = "${env:ProgramFiles}\Simple PC Tools\simple-pc-tools.exe"
           if (-not (Test-Path $exe)) { throw "not installed" }
           $task = Get-ScheduledTask -TaskName 'Simple PC Tools'
@@ -50,8 +54,10 @@ jobs:
           $settings = Get-Content "$env:LOCALAPPDATA\Simple PC Tools\settings.json" | ConvertFrom-Json
           if (-not $settings.tools.apps -or $settings.tools.disk) { throw "tool choice not saved: $($settings.tools)" }
           $uninstaller = Get-Item "${env:ProgramFiles}\Simple PC Tools\unins*.exe"
-          Start-Process $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -Wait
-          Start-Sleep 3
+          if (-not (Get-Process simple-pc-tools -ErrorAction SilentlyContinue)) { Write-Warning "app isn't running after install (no desktop session on the runner?)" }
+          (Start-Process $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -PassThru).WaitForExit()
+          Start-Sleep 5
+          if (Get-Process simple-pc-tools -ErrorAction SilentlyContinue) { throw "app still running after uninstall" }
           if (Get-ScheduledTask -TaskName 'Simple PC Tools' -ErrorAction SilentlyContinue) { throw "sign-in task left behind" }
           if (Test-Path $exe) { throw "exe left behind" }
           "install and uninstall OK"

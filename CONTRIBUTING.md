@@ -14,22 +14,34 @@ Windows switches the output and I have to switch it back" helps more than
 
 ```
 src/
-  main.rs         start-up: one copy only, admin rights, tray and window, installer steps
-  desktop.rs      tray icon and the WebView2 window; serves the UI over a private spt:// protocol
-  api.rs          the UI's routes: page, settings, updates; each tool's API is nested in
-  settings.rs     settings.json (which tools are on, theme, update choices)
-  autostart.rs    the "Simple PC Tools" sign-in task (Task Scheduler)
-  elevation.rs    the admin rights check and relaunch
-  instance.rs     the one-copy rule (a local port that accepts only SHOW and QUIT)
-  update.rs       the GitHub release check and the update download
+  main.rs           start-up: one copy only, admin rights, tray and window, installer steps
+  desktop.rs        tray icon and the WebView2 window; serves the UI over a private spt:// protocol
+  api.rs            the UI's routes: page files, info, settings, updates; mounts the tools' APIs
+  settings.rs       settings.json (which tools are on, theme, update choices)
+  autostart.rs      the "Simple PC Tools" sign-in task (Task Scheduler)
+  elevation.rs      the admin rights check and relaunch
+  instance.rs       the one-copy rule (a local port that accepts only SHOW and QUIT)
+  update.rs         the GitHub release check and the update download
   tools/
-    apps/         App manager: model (mod.rs), check loop (supervisor.rs), checks (probe.rs),
-                  start/stop steps (action.rs), starting with the user's normal rights (launch.rs)
-    disk.rs       Disk usage API on top of crates/disk-scan
-crates/disk-scan  fast folder sizes: reads the NTFS file table, or walks the folders
-ui/index.html     the whole UI: one file with no build step (see DESIGN.md)
-installer/        the Inno Setup script
+    mod.rs          THE TOOL LIST (ALL), and starting / routing / switching tools
+    apps/           Apps: model (mod.rs), API (api.rs), check loop (supervisor.rs),
+                    checks (probe.rs), start/stop steps (action.rs), starting with
+                    the user's normal rights (launch.rs)
+    disk.rs         Disk usage API, on top of crates/disk-scan
+crates/disk-scan/   fast folder sizes: reads the NTFS file table, or walks the folders
+ui/
+  index.html        the shell: sidebar, icon sprite, script list
+  style.css         all styles; design tokens at the top (DESIGN.md)
+  js/core.js        helpers, API client, page registry, nav, routing, update banner
+  js/<id>.js        one page per tool (apps.js, disk.js), then settings.js
+  js/demo.js        demo data for /?demo (every state of every page)
+installer/          the Inno Setup wizard
+scripts/            screenshots.ps1 (README pictures from the demo data)
+tests/ui_design.rs  design rules, and checks that every tool is fully wired
 ```
+
+The UI has no framework and no build step: plain HTML, CSS and JavaScript,
+built into the exe with `include_str!`.
 
 The app runs as administrator, so **its API must never be reachable from
 outside its own window**. The window gets the page and API through the private
@@ -38,19 +50,41 @@ only.
 
 ## Adding a tool
 
-1. **Is it simple?** One job, useful with its defaults, and nothing the user
-   has to learn first. Power-user options go under **Advanced**.
-2. **Backend.** Add `src/tools/<tool>.rs` (or a folder) with a
-   `router() -> axum::Router`, and nest it in `src/api.rs` under
-   `/api/<tool>`.
-3. **On/off.** Add a field to `Tools` in `src/settings.rs`, defaulting to
-   `true`. Add a `--tools` name in `main.rs` `setup()`, and a component in
-   `installer/simple-pc-tools.iss`.
-4. **Page.** In `ui/index.html`, add a nav link with `data-tool="<tool>"`, a
-   `<section id="page-<tool>">`, a `show<Tool>()` function in `route()`, a
-   switch on the Settings page, and demo answers in `demoApi`.
-5. **Docs.** Add a section to README.md, and to DESIGN.md if you added a
-   component.
+First ask: **is it simple?** One job, useful with its defaults, and nothing to
+learn first. Power-user options go under an **Advanced** disclosure.
+
+Say the new tool is `cleanup`.
+
+**Server (Rust)**
+
+1. Write `src/tools/cleanup.rs` with `pub fn router(...) -> axum::Router` (see
+   `disk.rs` for a small example) and `pub mod cleanup;` in `src/tools/mod.rs`.
+2. In `src/tools/mod.rs`, add it to **`ALL`** (id, name, one-sentence about),
+   and nest its router in `Tools::router` under `/api/cleanup`. If it does
+   background work, keep its state in `Tools` and pause it in `set_enabled`.
+
+That's all on the server. Settings, `--tools`, the Settings switch and the
+nav entry all come from `ALL`.
+
+**Page (JavaScript)**
+
+3. Write `ui/js/cleanup.js`, starting with
+   `const cleanupPage = registerPage('cleanup', { show: showCleanup });`.
+   Render into `cleanupPage`, reuse the components in DESIGN.md, and use
+   `api()`, `run()`, `toast()` and `confirmClick()` from `core.js`.
+4. Load it in `ui/index.html` (before `settings.js`), serve it in `UI_FILES`
+   in `src/api.rs`, and add it to `scripts()` in `tests/ui_design.rs`.
+5. Add a nav icon `<symbol id="i-cleanup">` to the sprite in `ui/index.html`.
+6. In `ui/js/demo.js`, add the tool to `demo.info.tools` and give `demoApi`
+   answers for `/api/cleanup/...`.
+
+**Installer and docs**
+
+7. Add a `[Components]` line `Name: "cleanup"` to `installer/simple-pc-tools.iss`.
+8. Add a README section and run `scripts\screenshots.ps1` for a screenshot.
+
+`cargo test` fails with a message naming the missing piece if you skip any of
+steps 2–7.
 
 ## Before opening a pull request
 
