@@ -265,18 +265,24 @@ mod tests {
 
         let progress = Progress::default();
         let tree = scan(r, &progress).unwrap();
-        assert_eq!(
-            tree.method,
-            Method::FolderWalk,
-            "test shell is not elevated"
-        );
+        // Elevated (as on GitHub's runners), the same scan reads the file
+        // table instead; everything below must hold for both methods.
+        let expected = if crate::is_elevated() {
+            Method::FileTable
+        } else {
+            Method::FolderWalk
+        };
+        assert_eq!(tree.method, expected);
         assert!(tree.skipped.is_empty(), "{:?}", tree.skipped);
 
         let root = &tree.nodes[tree.root as usize];
         assert_eq!(root.size, 6510);
         assert_eq!(root.files, 5);
         assert_eq!(root.dirs, 5);
-        assert!(root.allocated >= root.size);
+        if tree.method == Method::FolderWalk {
+            // The file table reports 0 allocated for tiny files stored inside their record.
+            assert!(root.allocated >= root.size);
+        }
         assert_eq!(progress.files.load(Ordering::Relaxed), 5);
         assert_eq!(progress.bytes.load(Ordering::Relaxed), 6510);
 
