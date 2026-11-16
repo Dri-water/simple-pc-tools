@@ -42,7 +42,8 @@ jobs:
         run: |
           $out = "target\installer"
           Compress-Archive -Path target\release\simple-pc-tools.exe, LICENSE -DestinationPath "$out\simple-pc-tools-$env:VERSION-portable.zip"
-          Get-ChildItem $out -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name } | Out-File "$out\SHA256SUMS.txt" -Encoding ascii
+          $sums = Get-ChildItem $out -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
+          $sums | Out-File "$out\SHA256SUMS.txt" -Encoding ascii
 
       - name: Publish release
         shell: pwsh
