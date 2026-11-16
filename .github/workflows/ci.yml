@@ -20,3 +20,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test (includes the UI design rules in tests/ui_design.rs)
         run: cargo test --workspace
+      - name: Fast scan of a real drive (GitHub's runners are administrators)
+        run: cargo test -p disk-scan -- --ignored --nocapture real_volume
+      - name: Fast scan vs folder walk, side by side
+        run: cargo run --release -p disk-scan --example scan -- C:\Windows
