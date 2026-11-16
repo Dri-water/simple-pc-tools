@@ -24,3 +24,38 @@ jobs:
         run: cargo test -p disk-scan -- --ignored --nocapture real_volume
       - name: Fast scan vs folder walk, side by side
         run: cargo run --release -p disk-scan --example scan -- C:\Windows
+
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=0.0.0 installer\simple-pc-tools.iss
+      - name: Install, check, uninstall
+        shell: pwsh
+        run: |
+          $setup = Get-Item target\installer\simple-pc-tools-setup-*.exe
+          Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/COMPONENTS="core,apps"','/TASKS="autostart"' -Wait
+          $exe = "${env:ProgramFiles}\Simple PC Tools\simple-pc-tools.exe"
+          if (-not (Test-Path $exe)) { throw "not installed" }
+          $task = Get-ScheduledTask -TaskName 'Simple PC Tools'
+          if ($task.Principal.RunLevel -ne 'Highest') { throw "sign-in task isn't elevated" }
+          $settings = Get-Content "$env:LOCALAPPDATA\Simple PC Tools\settings.json" | ConvertFrom-Json
+          if (-not $settings.tools.apps -or $settings.tools.disk) { throw "tool choice not saved: $($settings.tools)" }
+          $uninstaller = Get-Item "${env:ProgramFiles}\Simple PC Tools\unins*.exe"
+          Start-Process $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -Wait
+          Start-Sleep 3
+          if (Get-ScheduledTask -TaskName 'Simple PC Tools' -ErrorAction SilentlyContinue) { throw "sign-in task left behind" }
+          if (Test-Path $exe) { throw "exe left behind" }
+          "install and uninstall OK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: target/installer/*.exe
