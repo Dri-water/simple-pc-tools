@@ -12,6 +12,8 @@
 #define AppName "Simple PC Tools"
 #define AppExe "simple-pc-tools.exe"
 #define AppUrl "https://github.com/Dri-water/simple-pc-tools"
+; Every tool id, as in src/tools/mod.rs; each also needs a [Components] line.
+#define ToolIds "apps,disk,resources"
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
@@ -64,6 +66,7 @@ Name: "custom"; Description: "Custom installation"; Flags: iscustom
 Name: "core"; Description: "Simple PC Tools (required)"; Types: full custom; Flags: fixed
 Name: "apps"; Description: "Apps: start programs when you sign in and keep them running"; Types: full custom
 Name: "disk"; Description: "Disk usage: see which folders take up the most space"; Types: full custom
+Name: "resources"; Description: "Resources: see what's using your memory, processor and network"; Types: full custom
 
 [Tasks]
 Name: "autostart"; Description: "Start Simple PC Tools when I sign in (recommended)"; GroupDescription: "Startup:"
@@ -103,14 +106,24 @@ begin
   Result := '';
 end;
 
+{ The ticked tools, as "apps,disk", for --setup --tools. }
 function ToolList(Param: String): String;
+var
+  Ids, Id: String;
+  P: Integer;
 begin
   Result := '';
-  if WizardIsComponentSelected('apps') then Result := 'apps';
-  if WizardIsComponentSelected('disk') then
+  Ids := '{#ToolIds},';
+  while Ids <> '' do
   begin
-    if Result <> '' then Result := Result + ',';
-    Result := Result + 'disk';
+    P := Pos(',', Ids);
+    Id := Copy(Ids, 1, P - 1);
+    Delete(Ids, 1, P);
+    if WizardIsComponentSelected(Id) then
+    begin
+      if Result <> '' then Result := Result + ',';
+      Result := Result + Id;
+    end;
   end;
   if Result = '' then Result := 'none';
 end;

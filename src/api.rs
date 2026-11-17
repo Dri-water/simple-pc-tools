@@ -74,6 +74,11 @@ const UI_FILES: &[(&str, &str, &str)] = &[
     ("/ui/js/apps.js", JS, include_str!("../ui/js/apps.js")),
     ("/ui/js/disk.js", JS, include_str!("../ui/js/disk.js")),
     (
+        "/ui/js/resources.js",
+        JS,
+        include_str!("../ui/js/resources.js"),
+    ),
+    (
         "/ui/js/settings.js",
         JS,
         include_str!("../ui/js/settings.js"),

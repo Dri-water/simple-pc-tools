@@ -10,17 +10,19 @@ const CSS: &str = include_str!("../ui/style.css");
 const CORE: &str = include_str!("../ui/js/core.js");
 const APPS: &str = include_str!("../ui/js/apps.js");
 const DISK: &str = include_str!("../ui/js/disk.js");
+const RESOURCES: &str = include_str!("../ui/js/resources.js");
 const SETTINGS: &str = include_str!("../ui/js/settings.js");
 const DEMO: &str = include_str!("../ui/js/demo.js");
 const API: &str = include_str!("../src/api.rs");
 const TOOLS: &str = include_str!("../src/tools/mod.rs");
 const INSTALLER: &str = include_str!("../installer/simple-pc-tools.iss");
 
-fn scripts() -> [(&'static str, &'static str); 5] {
+fn scripts() -> [(&'static str, &'static str); 6] {
     [
         ("core.js", CORE),
         ("apps.js", APPS),
         ("disk.js", DISK),
+        ("resources.js", RESOURCES),
         ("settings.js", SETTINGS),
         ("demo.js", DEMO),
     ]
@@ -281,6 +283,15 @@ fn every_tool_is_fully_wired() {
         assert!(
             INSTALLER.contains(&format!("Name: \"{id}\"")),
             "installer has no component for {id:?}"
+        );
+        let ids = INSTALLER
+            .split("#define ToolIds \"")
+            .nth(1)
+            .and_then(|s| s.split('"').next())
+            .expect("installer defines ToolIds");
+        assert!(
+            ids.split(',').any(|t| t == id),
+            "installer ToolIds lacks {id:?}"
         );
     }
 }

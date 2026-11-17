@@ -31,6 +31,9 @@ try {
     @('app-editor', 'noupdate&theme=light&shot=editor', 'apps', 1280, 900),
     @('disk-usage', 'noupdate&theme=light&shot=disk', 'disk', 1280, 900),
     @('disk-usage-dark', 'noupdate&theme=dark&shot=disk', 'disk', 1280, 900),
+    @('resources', 'noupdate&theme=light&shot=chart', 'resources', 1280, 1000),
+    @('resources-dark', 'noupdate&theme=dark&shot=chart', 'resources', 1280, 1000),
+    @('resources-port', 'noupdate&theme=light&shot=port', 'resources', 1280, 1720),
     @('settings', 'noupdate&theme=light', 'settings', 1280, 1000),
     @('update-prompt', 'theme=light', 'apps', 1280, 520),
     @('narrow', 'noupdate&theme=light', 'apps', 520, 1000)

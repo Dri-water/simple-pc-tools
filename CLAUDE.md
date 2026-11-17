@@ -41,5 +41,9 @@ WebView2 window. Read CONTRIBUTING.md for the layout.
   `--no-elevate --dev-server 127.0.0.1:7901 --instance-port 47699 --data-dir target\dev-data`.
   A copy on the default instance port or data folder would start and restart
   real programs.
+- Set up or start a real install from a Claude Desktop session. Claude
+  Desktop is a packaged app: what it starts saves AppData into its private
+  folder (see `src/sandbox.rs`). Let the user run the installer, or start the
+  sign-in task (`schtasks /Run /TN "Simple PC Tools"`).
 - Change the `AppId` in `installer/simple-pc-tools.iss`, or the task name in
   `src/autostart.rs`: installed copies depend on them.

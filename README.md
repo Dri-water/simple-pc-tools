@@ -53,6 +53,25 @@ anything.
 
 <p align="center"><img src="docs/screenshots/disk-usage.png" width="760" alt="Disk usage: two drives with free space, and C: broken down by folder, biggest first"></p>
 
+### Resources: what's using your PC
+
+Like Task Manager, but clearer. Processor, memory and network at a glance, and
+a stacked chart of the last 15 minutes of memory: point at a layer to see
+which program it is and how much it used at that moment. Programs are grouped,
+so a browser's 30 processes are one row.
+
+<p align="center"><img src="docs/screenshots/resources.png" width="760" alt="Resources: processor, memory and network tiles, and a stacked memory chart with a tooltip on the web browser's layer"></p>
+
+Type a port number in the search box to see which program has it open (handy
+when something says "port 8080 is already in use"). Click a program to see
+where its file is, its open ports and its processes, or to end it. Parts of
+Windows can't be ended from here.
+
+<p align="center"><img src="docs/screenshots/resources-port.png" width="760" alt="Searching for port 8096 shows that Home media server has it open, with the program's details"></p>
+
+Under **Advanced**: committed memory, process and thread counts, uptime, and
+every network port with the program behind it.
+
 ### Settings
 
 Start with Windows, light, dark or system theme, which tools are on, and
@@ -121,13 +140,13 @@ Windows are switches in **Settings**.
 For IT and scripted installs, the usual Inno Setup switches work:
 
 ```powershell
-simple-pc-tools-setup-0.1.1.exe /VERYSILENT /COMPONENTS="core,apps,disk" /TASKS="autostart"
+simple-pc-tools-setup-0.1.1.exe /VERYSILENT /COMPONENTS="core,apps,disk,resources" /TASKS="autostart"
 ```
 
 ### Why administrator rights?
 
-The fast disk scan needs them, and so does starting at sign-in without a UAC
-prompt. Apps you add still start with your **normal** rights unless you choose
+The fast disk scan needs them, Resources needs them to see every program's
+memory, and so does starting at sign-in without a UAC prompt. Apps you add still start with your **normal** rights unless you choose
 **Run as administrator** for that app. The app's controls are only reachable
 from its own window, never over the network.
 

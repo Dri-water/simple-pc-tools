@@ -9,6 +9,7 @@
 
 pub mod apps;
 pub mod disk;
+pub mod resources;
 
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -38,6 +39,11 @@ pub const ALL: &[ToolInfo] = &[
         name: "Disk usage",
         about: "See which folders take up the most space.",
     },
+    ToolInfo {
+        id: "resources",
+        name: "Resources",
+        about: "See what's using your memory, processor and network, and which program has a port open.",
+    },
 ];
 
 pub fn find(id: &str) -> Option<&'static ToolInfo> {
@@ -49,6 +55,7 @@ pub fn find(id: &str) -> Option<&'static ToolInfo> {
 pub struct Tools {
     pub apps: Arc<apps::supervisor::Manager>,
     pub disk: Arc<disk::Disk>,
+    pub resources: Arc<resources::Resources>,
 }
 
 impl Tools {
@@ -58,6 +65,7 @@ impl Tools {
         let tools = Self {
             apps: apps::start(data_dir),
             disk: Arc::default(),
+            resources: resources::start(),
         };
         for t in ALL {
             tools.set_enabled(t.id, settings.tool_on(t.id));
@@ -70,14 +78,30 @@ impl Tools {
         Router::new()
             .nest("/api/apps", apps::api::router(self.apps.clone()))
             .nest("/api/disk", disk::router(self.disk.clone()))
+            .nest("/api/resources", resources::router(self.resources.clone()))
     }
 
     /// Called when a tool is switched on or off in Settings. Tools with
     /// background work pause it here; page-only tools need nothing.
     pub fn set_enabled(&self, id: &str, on: bool) {
-        if id == "apps" {
-            self.apps.enabled.store(on, Ordering::Relaxed);
-            self.apps.wake.notify_one();
-        }
+        let (enabled, wake) = match id {
+            "apps" => (&self.apps.enabled, &self.apps.wake),
+            "resources" => (&self.resources.enabled, &self.resources.wake),
+            _ => return,
+        };
+        enabled.store(on, Ordering::Relaxed);
+        wake.notify_one();
     }
+}
+
+/// Opens File Explorer with this file or folder selected.
+pub fn show_in_explorer(path: &Path) -> anyhow::Result<()> {
+    use std::os::windows::process::CommandExt;
+    if !path.exists() {
+        anyhow::bail!("{} no longer exists.", path.display());
+    }
+    std::process::Command::new("explorer.exe")
+        .raw_arg(format!("/select,\"{}\"", path.display()))
+        .spawn()?;
+    Ok(())
 }

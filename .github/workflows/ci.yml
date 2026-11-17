@@ -52,7 +52,7 @@ jobs:
           $task = Get-ScheduledTask -TaskName 'Simple PC Tools'
           if ($task.Principal.RunLevel -ne 'Highest') { throw "sign-in task isn't elevated" }
           $settings = Get-Content "$env:LOCALAPPDATA\Simple PC Tools\settings.json" | ConvertFrom-Json
-          if (-not $settings.tools.apps -or $settings.tools.disk) { throw "tool choice not saved: $($settings.tools)" }
+          if (-not $settings.tools.apps -or $settings.tools.disk -or $settings.tools.resources) { throw "tool choice not saved: $($settings.tools)" }
           $uninstaller = Get-Item "${env:ProgramFiles}\Simple PC Tools\unins*.exe"
           if (-not (Get-Process simple-pc-tools -ErrorAction SilentlyContinue)) { Write-Warning "app isn't running after install (no desktop session on the runner?)" }
           (Start-Process $uninstaller -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES' -PassThru).WaitForExit()

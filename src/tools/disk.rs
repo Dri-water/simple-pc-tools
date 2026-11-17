@@ -239,15 +239,9 @@ async fn reveal(State(d): Shared, Json(r): Json<RevealRequest>) -> Response {
             _ => return StatusCode::NOT_FOUND.into_response(),
         }
     };
-    if !path.exists() {
-        return bad_request(anyhow::anyhow!("{} no longer exists.", path.display()));
-    }
-    use std::os::windows::process::CommandExt;
-    let mut cmd = std::process::Command::new("explorer.exe");
-    cmd.raw_arg(format!("/select,\"{}\"", path.display()));
-    match cmd.spawn() {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => bad_request(e.into()),
+    match super::show_in_explorer(&path) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => bad_request(e),
     }
 }
 

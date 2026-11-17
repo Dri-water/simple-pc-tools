@@ -28,12 +28,15 @@ src/
                     checks (probe.rs), start/stop steps (action.rs), starting with
                     the user's normal rights (launch.rs)
     disk.rs         Disk usage API, on top of crates/disk-scan
+    resources/      Resources: sampling and history (mod.rs), reading processes,
+                    memory, processor and network from Windows (sample.rs),
+                    which process owns each port (ports.rs)
 crates/disk-scan/   fast folder sizes: reads the NTFS file table, or walks the folders
 ui/
   index.html        the shell: sidebar, icon sprite, script list
   style.css         all styles; design tokens at the top (DESIGN.md)
   js/core.js        helpers, API client, page registry, nav, routing, update banner
-  js/<id>.js        one page per tool (apps.js, disk.js), then settings.js
+  js/<id>.js        one page per tool (apps.js, disk.js, resources.js), then settings.js
   js/demo.js        demo data for /?demo (every state of every page)
 installer/          the Inno Setup wizard
 scripts/            screenshots.ps1 (README pictures from the demo data)
@@ -80,7 +83,8 @@ nav entry all come from `ALL`.
 
 **Installer and docs**
 
-7. Add a `[Components]` line `Name: "cleanup"` to `installer/simple-pc-tools.iss`.
+7. In `installer/simple-pc-tools.iss`, add a `[Components]` line `Name: "cleanup"`
+   and add `cleanup` to `#define ToolIds`.
 8. Add a README section and run `scripts\screenshots.ps1` for a screenshot.
 
 `cargo test` fails with a message naming the missing piece if you skip any of

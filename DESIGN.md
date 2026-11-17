@@ -29,7 +29,8 @@ The judgement rules are up to you, so read this before changing the UI.
    No CDNs, frameworks or build step. It must work with no network.
 7. **One accent.** Blue (from the icon) is the brand: primary buttons,
    switches, the current nav item, size bars. State colours are separate and
-   never used for decoration.
+   never used for decoration. Chart colours (`--c1`…) only tell programs
+   apart in a chart.
 
 ## Themes
 
@@ -53,6 +54,7 @@ All tokens are at the top of `ui/style.css`, between `TOKENS:BEGIN` and
 | Brand | `--accent` `--accent-hover` `--accent-soft` `--on-accent` | primary button, switches, links, current item |
 | State | `--ok` `--warn` `--bad` `--info` `--idle`, each with `-soft` | lamps, pills, chips, banners |
 | Data | `--bar` `--bar-track` | size bars, drive meters |
+| Chart | `--c1`…`--c7` `--c-other` `--c-sys` | layers of the Resources memory chart, and the matching swatches; never for anything else |
 | Effects | `--shadow` `--scrim` `--focus` `--ease` | raised items; dialog backdrop; focus ring |
 | Type | `--font-display` `--font-text` `--font-data` | headings; body; paths, sizes, times, JSON |
 | Scale | `--step--1` 12, `--step-0` 14, `--step-1` 16, `--step-2` 20, `--step-3` 28 | no other font sizes |
@@ -108,6 +110,26 @@ Reuse these; don't invent look-alikes. A new component gets a line here.
 - **Dialog** `dialog.sheet`: the add/edit form, with a header, a scrolling
   body, and a footer whose primary action sits on the right.
 - **Breadcrumbs** `.crumbs` and **size table** `.items`: the Disk usage browser.
+  `.items` is also the Resources program and port tables; a row can open a
+  `tr.detail` under it.
+- **Stat tile** `.stat` in a `.stats` grid: a label, one big number, one line
+  of context and a `.spark` line of recent history (accent colour).
+- **Stacked chart** `.chart`: an SVG of `.layer` paths, one per program
+  (colour class `.k1`…`.k7`, `.kother`, `.ksys`), stacked in a fixed order so
+  a program keeps its place and colour. Pointing at it shows a `.guide` line
+  and a **tooltip** `.tip` (name, amount, time), and dims the other layers.
+  The `.legend` below has a `.leg` per layer with a `.sw` swatch; pointing at
+  one highlights its layer.
+- **Toolbar** `.toolbar`: a search `.input` and a `.seg` at the top of a card.
+  A search result that answers a question directly (which program has port
+  8000) goes in a `.hit` line under it.
+- **Search** filters on every keystroke (no Enter, no delay). Every word must
+  match; matches are wrapped in `<mark>`, and when a row matched on something
+  its name doesn't show (the exe, the path, a process ID, a port), a faint
+  `.why` line under the name says what. A faint count ("3 of 165") sits in
+  the toolbar while a search is typed. Keys: `/` or Ctrl+F focuses it, Enter
+  opens the top result, Down moves into the list, Esc clears it (then leaves
+  it). A list that refreshes holds still while a row has keyboard focus.
 - **Empty state** `.card.empty`: an icon, a heading, one sentence, and the
   action to take.
 - **Toast** `toast(msg)`: confirms every action in one short sentence.
@@ -132,6 +154,19 @@ click turns the button into "Click again to …" for 4 seconds. Never use
 - Respect `prefers-reduced-motion`, and keep the `:focus-visible` outlines.
 - A new server field shown in the UI also goes into the demo data (`ui/js/demo.js`).
 - Run `scripts\screenshots.ps1` after a visible change, so the README pictures stay current.
+
+## Resources page
+
+- Memory per program is the **private working set** (what Task Manager shows),
+  so the layers add up. What's left of "in use" is drawn as **Windows and
+  system** at the bottom.
+- The chart is scaled to the recent peak, not to total memory, and the label
+  says so ("18 GB (of 32 GB)").
+- The list refreshes every second, but while the pointer is over it, rows keep
+  their order and only the numbers change, so a click never lands on a row
+  that just moved.
+- Parts of Windows (and this app) have no **End** button; the server refuses
+  to end them too.
 
 ## The icon
 
